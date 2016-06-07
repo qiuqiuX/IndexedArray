@@ -11,9 +11,9 @@ use SplFixedArray;
 class IndexedArray implements ArrayAccess, Countable, Iterator
 {
 
-    public $bucketSize;
+    protected $bucketSize;
     protected $currentSize = 0;
-    public $fixedArray;
+    protected $fixedArray;
 
     public function __construct($bucketSize = 8)
     {
