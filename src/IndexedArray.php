@@ -21,6 +21,12 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
         $this->fixedArray = new SplFixedArray($this->bucketSize);
     }
 
+    /**
+     * Create from array.
+     * @param $array
+     * @param bool $saveIndex
+     * @return static
+     */
     public static function createFormArray($array, $saveIndex = true)
     {
         if ($saveIndex) {
@@ -36,6 +42,11 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
         return $indexArray;
     }
 
+    /**
+     * Create from SplFixedArray.
+     * @param SplFixedArray $fixedArray
+     * @return static
+     */
     public static function createFromFixedArray(SplFixedArray $fixedArray)
     {
         if (!$fixedArray instanceof SplFixedArray) {
@@ -47,10 +58,13 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
         $indexArray = new static($size);
         $indexArray->fixedArray = $fixedArray;
         $indexArray->currentSize = $size;
-        $indexArray->bucketSize = $fixedArray;
+        $indexArray->bucketSize = $size;
         return $indexArray;
     }
 
+    /**
+     * @return mixed|null
+     */
     public function pop()
     {
         if ($this->currentSize == 0) {
@@ -62,6 +76,9 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
         return $val;
     }
 
+    /**
+     * @return mixed|null
+     */
     public function shift()
     {
         if ($this->currentSize == 0) {
@@ -73,9 +90,13 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
         $this->fixedArray = SplFixedArray::fromArray($array, false);
         --$this->currentSize;
         $this->adjustSize();
+
         return $val;
     }
 
+    /**
+     * @param $val
+     */
     public function unshift($val)
     {
         $this->checkAndResizeIfNecessary();
@@ -87,6 +108,11 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
         $this->adjustSize();
     }
 
+    /**
+     * Remove the duplicate values from the instance,
+     * return a new IndexedArray instance.
+     * @return IndexedArray
+     */
     public function unique()
     {
         $array = $this->toArray();
@@ -94,6 +120,11 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
         return static::createFormArray($array, false);
     }
 
+    /**
+     * @param $value
+     * @param bool $strict
+     * @return bool|int
+     */
     public function search($value, $strict = false)
     {
         $array = $this->toArray();
@@ -110,20 +141,57 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
         return false;
     }
 
+    /**
+     * Transform the value using the callback function,
+     * return a new IndexedArray instance.
+     * @param callable $callback
+     * @param bool $reference
+     * @return $this
+     */
     public function transform(callable $callback, $reference = true)
     {
         $array = $this->toArray();
         $reference ? array_walk($array, $callback) : array_map($callback, $array);
-        $this->fixedArray = SplFixedArray::fromArray($array);
-        $this->bucketSize = $this->getSize();
+        $indexedArray = static::createFormArray($array);
+        $indexedArray->bucketSize = $this->getSize();
 
-        return $this;
+        return $indexedArray;
     }
 
+    /**
+     * Reverse the values,
+     * return a new IndexedArray instance.
+     * @return IndexedArray
+     */
     public function reverse()
     {
         $array = $this->toArray();
         return static::createFormArray(array_reverse($array));
+    }
+
+    /**
+     * Merge the given IndexedArrays,
+     * return a new IndexedArray instance.
+     * @param IndexedArray $indexedArray
+     * @return IndexedArray
+     */
+    public function merge(IndexedArray $indexedArray)
+    {
+        $newIndexArray = clone $this;
+
+        $currentSize = $newIndexArray->getSize();
+
+        // Manually set the size to avoid multiple adjustments.
+        $total = $currentSize + $indexedArray->getSize();
+        $newIndexArray->fixedArray->setSize($total);
+        $newIndexArray->bucketSize = $total;
+        $newIndexArray->currentSize = $total;
+
+        foreach ($indexedArray as $val) {
+            $newIndexArray->fixedArray->offsetSet($currentSize++, $val);
+        }
+
+        return $newIndexArray;
     }
 
     protected function adjustSize()
@@ -202,7 +270,8 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
 
     public function toArray()
     {
-        return array_splice($this->fixedArray->toArray(), 0, $this->currentSize);
+        $array = $this->fixedArray->toArray();
+        return array_splice($array, 0, $this->currentSize);
     }
 
     public function current()
