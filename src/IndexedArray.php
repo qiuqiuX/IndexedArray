@@ -11,9 +11,9 @@ use SplFixedArray;
 class IndexedArray implements ArrayAccess, Countable, Iterator
 {
 
-    protected $bucketSize;
+    public $bucketSize;
     protected $currentSize = 0;
-    protected $fixedArray;
+    public $fixedArray;
 
     public function __construct($bucketSize = 8)
     {
@@ -74,6 +74,15 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
         $val = $this->fixedArray[$this->currentSize - 1];
         $this->fixedArray->offsetUnset(--$this->currentSize);
         return $val;
+    }
+
+    /**
+     * @param $val
+     */
+    public function push($val)
+    {
+        $this->checkAndResizeIfNecessary();
+        $this->fixedArray[$this->currentSize++] = $val;
     }
 
     /**
@@ -179,10 +188,10 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
     {
         $newIndexArray = clone $this;
 
-        $currentSize = $newIndexArray->getSize();
+        $currentSize = $newIndexArray->currentSize;
 
         // Manually set the size to avoid multiple adjustments.
-        $total = $currentSize + $indexedArray->getSize();
+        $total = $currentSize + $indexedArray->currentSize;
         $newIndexArray->fixedArray->setSize($total);
         $newIndexArray->bucketSize = $total;
         $newIndexArray->currentSize = $total;
@@ -237,12 +246,6 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
         }
     }
 
-    public function push($val)
-    {
-        $this->checkAndResizeIfNecessary();
-        $this->fixedArray[$this->currentSize++] = $val;
-    }
-
     public function offsetUnset($offset)
     {
         $this->fixedArray->offsetUnset($offset);
@@ -271,7 +274,10 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
     public function toArray()
     {
         $array = $this->fixedArray->toArray();
-        return array_splice($array, 0, $this->currentSize);
+        if ($this->currentSize != $this->bucketSize) {
+            $array = array_splice($array, 0, $this->currentSize);
+        }
+        return $array;
     }
 
     public function current()
