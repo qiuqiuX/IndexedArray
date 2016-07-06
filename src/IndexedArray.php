@@ -4,6 +4,7 @@ namespace QiuQiuX\IndexedArray;
 
 use ArrayAccess;
 use Countable;
+use Closure;
 use InvalidArgumentException;
 use Iterator;
 use SplFixedArray;
@@ -35,11 +36,11 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
             $max = count($array);
         }
 
-        $indexArray = new static(0);
-        $indexArray->fixedArray = SplFixedArray::fromArray($array, $saveIndex);
-        $indexArray->currentSize = $max;
-        $indexArray->bucketSize = $max;
-        return $indexArray;
+        $indexedArray = new static(0);
+        $indexedArray->fixedArray = SplFixedArray::fromArray($array, $saveIndex);
+        $indexedArray->currentSize = $max;
+        $indexedArray->bucketSize = $max;
+        return $indexedArray;
     }
 
     /**
@@ -55,11 +56,11 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
         }
 
         $size = count($fixedArray);
-        $indexArray = new static($size);
-        $indexArray->fixedArray = $fixedArray;
-        $indexArray->currentSize = $size;
-        $indexArray->bucketSize = $size;
-        return $indexArray;
+        $indexedArray = new static($size);
+        $indexedArray->fixedArray = $fixedArray;
+        $indexedArray->currentSize = $size;
+        $indexedArray->bucketSize = $size;
+        return $indexedArray;
     }
 
     /**
@@ -114,7 +115,6 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
         array_unshift($array, $val);
         $this->fixedArray = SplFixedArray::fromArray($array);
         ++$this->currentSize;
-        $this->adjustSize();
     }
 
     /**
@@ -153,14 +153,15 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
     /**
      * Transform the value using the callback function,
      * return a new IndexedArray instance.
-     * @param callable $callback
-     * @param bool $reference
+     * @param Closure $callback
      * @return $this
      */
-    public function transform(callable $callback, $reference = true)
+    public function transform(Closure $callback)
     {
         $array = $this->toArray();
-        $reference ? array_walk($array, $callback) : array_map($callback, $array);
+
+        $array = array_map($callback, $array);
+
         $indexedArray = static::createFormArray($array);
         $indexedArray->bucketSize = $this->getSize();
 
@@ -175,7 +176,7 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
     public function reverse()
     {
         $array = $this->toArray();
-        return static::createFormArray(array_reverse($array));
+        return static::createFormArray(array_reverse($array), false);
     }
 
     /**
@@ -196,9 +197,11 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
         $newIndexArray->bucketSize = $total;
         $newIndexArray->currentSize = $total;
 
-        foreach ($indexedArray as $val) {
+        $indexedArray->fixedArray->setSize($indexedArray->getSize());
+
+        array_map(function($val) use(&$newIndexArray, &$currentSize) {
             $newIndexArray->fixedArray->offsetSet($currentSize++, $val);
-        }
+        }, $indexedArray->fixedArray->toArray());
 
         return $newIndexArray;
     }
@@ -223,12 +226,20 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
 
     public function offsetExists($offset)
     {
-        return $this->fixedArray->offsetExists($offset);
+        if ($offset < $this->currentSize) {
+            return true;
+        }
+
+        return false;
     }
 
     public function offsetGet($offset)
     {
-        return $this->fixedArray->offsetGet($offset);
+        if ($offset < $this->currentSize) {
+            return $this->fixedArray->offsetGet($offset);
+        }
+
+        return null;
     }
 
     public function offsetSet($offset, $value)
@@ -248,7 +259,9 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
 
     public function offsetUnset($offset)
     {
-        $this->fixedArray->offsetUnset($offset);
+        if ($offset < $this->currentSize) {
+            $this->fixedArray->offsetUnset($offset);
+        }
     }
 
     public function count()
@@ -295,6 +308,7 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
         if ($this->key() < $this->currentSize) {
             return true;
         }
+
 
         return false;
     }
