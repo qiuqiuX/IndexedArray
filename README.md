@@ -30,9 +30,9 @@
     $start = microtime(1);
     echo $indexedArray1->merge($indexedArray2)->getSize();    // 2000000
     $end = microtime(1);
-    echo "time :" . ($end - $start);                          // 1.3710789680481
-    echo memory_get_usage(1);                                 // 169345024 => 161.5m
-    echo memory_get_peak_usage(1);                            // 169345024 => 161.5m
+    echo "time :" . ($end - $start);                          // 0.975s
+    echo memory_get_usage(1);                                 // 186122240 => 177.5m
+    echo memory_get_peak_usage(1);                            // 346030080 => 330m
   
 
 
