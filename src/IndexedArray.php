@@ -99,7 +99,6 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
         $val = array_shift($array);
         $this->fixedArray = SplFixedArray::fromArray($array, false);
         --$this->currentSize;
-        $this->adjustSize();
 
         return $val;
     }
