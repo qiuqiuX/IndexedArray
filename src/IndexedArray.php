@@ -7,6 +7,7 @@ use Countable;
 use Closure;
 use InvalidArgumentException;
 use Iterator;
+use RuntimeException;
 use SplFixedArray;
 
 class IndexedArray implements ArrayAccess, Countable, Iterator
@@ -82,8 +83,7 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
      */
     public function push($val)
     {
-        $this->checkAndResizeIfNecessary();
-        $this->fixedArray[$this->currentSize++] = $val;
+        $this->offsetSet($this->currentSize++, $val);
     }
 
     /**
@@ -97,7 +97,7 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
 
         $array = $this->fixedArray->toArray();
         $val = array_shift($array);
-        $this->fixedArray = SplFixedArray::fromArray($array, false);
+        $this->fixedArray = SplFixedArray::fromArray($array);
         --$this->currentSize;
 
         return $val;
@@ -114,6 +114,15 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
         array_unshift($array, $val);
         $this->fixedArray = SplFixedArray::fromArray($array);
         ++$this->currentSize;
+    }
+
+    /**
+     * return the last value
+     * @return mixed
+     */
+    public function last()
+    {
+        return $this->fixedArray->offsetGet($this->currentSize - 1);
     }
 
     /**
@@ -234,24 +243,23 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
 
     public function offsetGet($offset)
     {
-        if ($offset < $this->currentSize) {
+        try {
+            var_dump($offset);exit;
             return $this->fixedArray->offsetGet($offset);
+        } catch (\RuntimeException $e) {
+            return null;
         }
-
-        return null;
     }
 
     public function offsetSet($offset, $value)
     {
-        if (is_null($offset)) {
-            $this->push($value);
-        } else {
-            $offset = intval($offset);
-            if ($offset >= $this->currentSize) {
-                $this->currentSize = $offset + 1;
-                $this->bucketSize = $this->currentSize;
-                $this->adjustSize();
-            }
+        is_null($offset) && $offset = $this->currentSize++;
+        try {
+            $this->fixedArray->offsetSet($offset , $value);
+        } catch (RuntimeException $e) {
+            $this->bucketSize = $offset << 1;
+            $this->adjustSize();
+            $this->currentSize = $offset + 1;
             $this->fixedArray->offsetSet($offset, $value);
         }
     }
@@ -304,12 +312,7 @@ class IndexedArray implements ArrayAccess, Countable, Iterator
 
     public function valid()
     {
-        if ($this->key() < $this->currentSize) {
-            return true;
-        }
-
-
-        return false;
+        return $this->fixedArray->key() < $this->currentSize;
     }
 
     public function key()

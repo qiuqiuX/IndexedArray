@@ -44,6 +44,7 @@
 * shift
 * unshift
 * unique
+* last
 * search
 * transform
 * reverse
