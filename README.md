@@ -1,5 +1,7 @@
 # IndexArray
 
+modify from SplFixedArray that can use as array.
+
 #### Examples:
 
 	$a = new IndexedArray();
@@ -27,12 +29,7 @@
         $indexedArray2[] = $max + $i;
     }
     
-    $start = microtime(1);
-    echo $indexedArray1->merge($indexedArray2)->getSize();    // 2000000
-    $end = microtime(1);
-    echo "time :" . ($end - $start);                          // 0.975s
-    echo memory_get_usage(1);                                 // 186122240 => 177.5m
-    echo memory_get_peak_usage(1);                            // 346030080 => 330m
+    echo $indexedArray1->merge($indexedArray2)->getSize();
   
 
 
